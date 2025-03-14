@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日新闻摘要</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #1890ff;
+            color: white;
+            padding: 15px;
+            border-radius: 5px 5px 0 0;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .news-item {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        .title {
+            margin-top: 0;
+            color: #1890ff;
+        }
+        .meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        .summary {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .sentiment {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .positive {
+            background-color: #52c41a;
+            color: white;
+        }
+        .neutral {
+            background-color: #faad14;
+            color: white;
+        }
+        .negative {
+            background-color: #f5222d;
+            color: white;
+        }
+        .button {
+            display: inline-block;
+            background-color: #1890ff;
+            color: white;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>每日新闻摘要</h1>
+        <p>{{ date }}</p>
+    </div>
+    <div class="content">
+        <h2>今日新闻摘要</h2>
+        
+        {% if news_items %}
+            {% for item in news_items %}
+                <div class="news-item">
+                    <h3 class="title">{{ item.title }}</h3>
+                    
+                    <div class="meta">
+                        <p>
+                            <strong>来源:</strong> {{ item.source }} | 
+                            <strong>发布时间:</strong> {{ item.published_at }}
+                            
+                            {% if item.sentiment_score is defined %}
+                                | <span class="sentiment 
+                                {% if item.sentiment_score > 0.3 %}positive
+                                {% elif item.sentiment_score < -0.3 %}negative
+                                {% else %}neutral{% endif %}">
+                                {% if item.sentiment_score > 0.3 %}正面
+                                {% elif item.sentiment_score < -0.3 %}负面
+                                {% else %}中性{% endif %}
+                                ({{ "%.2f"|format(item.sentiment_score) }})
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    {% if item.summary %}
+                    <div class="summary">
+                        <p>{{ item.summary }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if item.url %}
+                    <a href="{{ item.url }}" class="button">阅读原文</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>今天没有符合您关注的新闻。</p>
+        {% endif %}
+        
+        <div class="footer">
+            <p>此邮件由锦衣卫新闻监控系统自动发送，请勿直接回复。</p>
+            <p>如需退订，请登录系统修改您的通知设置。</p>
+        </div>
+    </div>
+</body>
+</html> 

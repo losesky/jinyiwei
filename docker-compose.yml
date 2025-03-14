@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:14-alpine
+    container_name: jinyiwei-postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=jinyiwei
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis缓存
+  redis:
+    image: redis:6-alpine
+    container_name: jinyiwei-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 后端API服务
+  backend:
+    build: .
+    container_name: jinyiwei-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/jinyiwei
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  # Celery Worker
+  celery_worker:
+    build: .
+    container_name: jinyiwei-celery-worker
+    command: celery -A app.workers.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - backend
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/jinyiwei
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  # Celery Beat
+  celery_beat:
+    build: .
+    container_name: jinyiwei-celery-beat
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - backend
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/jinyiwei
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  # Flower监控
+  flower:
+    build: .
+    container_name: jinyiwei-flower
+    command: celery -A app.workers.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - celery_worker
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+volumes:
+  postgres_data:
+  redis_data: 
