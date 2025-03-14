@@ -93,6 +93,8 @@ alembic upgrade head
 6. 初始化数据库（创建超级管理员账号）
 ```bash
 python -m app.db.init_db
+#或者使用管理脚本
+./manage.sh init-db
 ```
 
 7. 启动服务
